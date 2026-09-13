@@ -24,18 +24,28 @@ if not FORCE and now_et.hour!=6:
     print(f"Local ET hour is {now_et.hour}, not 6 — skipping this UTC firing.")
     sys.exit(0)
 
+UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+
 def curl(url, data=None, headers=None, method="GET"):
-    cmd=["curl","-s","-A","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36","-X",method,url]
+    cmd=["curl","-sS","--http1.1","--retry","3","--retry-delay","2","--connect-timeout","20",
+         "-A",UA,"-H","Accept: application/json","-w","\n__HTTP__%{http_code}","-X",method,url]
     for k,v in (headers or {}).items():
         cmd+=["-H",f"{k}: {v}"]
     if data:
         cmd+=["-H","Content-Type: application/x-www-form-urlencoded"]
         for k,v in data.items():
             cmd+=["--data-urlencode",f"{k}={v}"]
-    res=subprocess.run(cmd,capture_output=True,text=True,timeout=60)
-    if not res.stdout:
-        raise RuntimeError(f"empty response from {url}: {res.stderr[:200]}")
-    return json.loads(res.stdout)
+    res=subprocess.run(cmd,capture_output=True,text=True,timeout=90)
+    out=res.stdout or ""
+    code=""
+    if "__HTTP__" in out:
+        out,code=out.rsplit("__HTTP__",1); code=code.strip()
+    if res.returncode!=0 or not out.strip():
+        raise RuntimeError(f"request failed url={url} http={code} rc={res.returncode} err={res.stderr[:300]!r} body={out[:200]!r}")
+    try:
+        return json.loads(out)
+    except Exception:
+        raise RuntimeError(f"non-JSON response url={url} http={code} body={out[:300]!r}")
 
 def refresh():
     tok=curl(TOKEN_URL, method="POST", data={
