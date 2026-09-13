@@ -1,0 +1,12 @@
+# Never commit secrets or tokens
+*.txt
+!requirements.txt
+new_refresh_token.txt
+config.json
+tokens.json
+__pycache__/
+*.pyc
+.env
+
+# app clutter
+Claude outputs/
