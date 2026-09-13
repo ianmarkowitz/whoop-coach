@@ -1,0 +1,42 @@
+name: WHOOP Morning Coach
+
+on:
+  schedule:
+    - cron: "30 10 * * *"
+    - cron: "30 11 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Force run regardless of time"
+        default: "true"
+
+permissions:
+  contents: read
+
+jobs:
+  morning:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run WHOOP morning coach
+        env:
+          WHOOP_CLIENT_ID: ${{ secrets.WHOOP_CLIENT_ID }}
+          WHOOP_CLIENT_SECRET: ${{ secrets.WHOOP_CLIENT_SECRET }}
+          WHOOP_REFRESH_TOKEN: ${{ secrets.WHOOP_REFRESH_TOKEN }}
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          FORCE_RUN: ${{ github.event.inputs.force }}
+        run: python3 whoop_morning.py
+      - name: Rotate refresh token secret
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          if [ -f new_refresh_token.txt ]; then
+            gh secret set WHOOP_REFRESH_TOKEN --repo "$GITHUB_REPOSITORY" --body "$(cat new_refresh_token.txt)"
+            echo "Refresh token rotated and saved."
+          else
+            echo "No new refresh token this run."
+          fi
