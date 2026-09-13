@@ -25,7 +25,7 @@ if not FORCE and now_et.hour!=6:
     sys.exit(0)
 
 def curl(url, data=None, headers=None, method="GET"):
-    cmd=["curl","-s","-X",method,url]
+    cmd=["curl","-s","-A","Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36","-X",method,url]
     for k,v in (headers or {}).items():
         cmd+=["-H",f"{k}: {v}"]
     if data:
